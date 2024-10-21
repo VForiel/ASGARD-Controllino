@@ -13,17 +13,11 @@ void setup() {
   // put your setup code here, to run once:
 
   pinMode(CONTROLLINO_D0, OUTPUT);
-  pinMode(CONTROLLINO_D1, OUTPUT);
-  pinMode(CONTROLLINO_D2, OUTPUT);
-  pinMode(CONTROLLINO_D3, OUTPUT);
 
   // Ethernet initialization
   Ethernet.begin(mac, ip);
   server.begin();
   Serial.begin(9600);
-
-  // Ethernet will control the pin 5
-  pinMode(CONTROLLINO_D5, OUTPUT);
 
   Serial.println("Server started. You can connect at:");
   Serial.println(Ethernet.localIP());
@@ -35,18 +29,6 @@ void loop() {
   delay(100);
   digitalWrite(CONTROLLINO_D0, LOW);
   delay(100);
-  digitalWrite(CONTROLLINO_D1, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D1, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, LOW);
-  delay(100);
 
   // Listen resquests
   EthernetClient client = server.available();
@@ -54,11 +36,14 @@ void loop() {
   if (client) {
     Serial.println("Nouveau client connecté");
 
+    return;
+
     // Wait for the request
     boolean currentLineIsBlank = true;
     String httpRequest = "";
     
     while (client.connected()) {
+      Serial.println("client loop");
       if (client.available()) {
         char c = client.read();
         httpRequest += c;
@@ -67,10 +52,16 @@ void loop() {
         if (c == '\n' && currentLineIsBlank) {
           
           if (httpRequest.indexOf("GET /on") != -1) {
-            digitalWrite(CONTROLLINO_D5, HIGH);
+            // int output = get_output(httpRequest);
+            int output = 6;
+            digitalWrite(output, HIGH);
+            // digitalWrite(6, HIGH);
           } 
           else if (httpRequest.indexOf("GET /off") != -1) {
-            digitalWrite(CONTROLLINO_D5, LOW);
+            // int output = get_output(httpRequest);
+            int output = 6;
+            digitalWrite(output, LOW);
+            // digitalWrite(6, LOW);
           }
 
           // Answer the client
@@ -82,6 +73,7 @@ void loop() {
           client.println("<html>");
           client.println("<h1>Arduino Ethernet Control</h1>");
           client.println("<p>Envoyer GET /on pour allumer ou GET /off pour éteindre.</p>");
+          client.println(httpRequest);
           client.println("</html>");
           
           break;
@@ -101,4 +93,19 @@ void loop() {
     client.stop();
     Serial.println("Client déconnecté");
   }
+}
+
+int get_output(String request){
+  int i = 0;
+  String number;
+  while (!isdigit(request[i])) {
+      Serial.println("not digit");
+      i++;
+  }
+  while (isdigit(request[i])) {
+      Serial.println("digit");
+      number += request[i];
+      i++;
+  }
+  return number.toInt();
 }
