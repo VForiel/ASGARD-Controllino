@@ -1,104 +1,72 @@
-#include <Controllino.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <EthernetServer.h>
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
 byte mac[] = {0x50, 0xD7, 0x53, 0x00, 0xEB, 0xA7};    // MAC address (can be found on the Controllino)
-IPAddress ip(192, 168, 1, 177);                       // IP address (arbitrarily choosen)
-EthernetServer server(80);                            // HTTP port
+IPAddress ip(192, 168, 1, 100);  // Adresse IP de l'Arduino
+EthernetServer server(80);  // Serveur sur le port 5555
+
+String inputString = ""; // Stocke la chaîne reçue
+bool stringComplete = false; // Vérifie si l'entrée est complète
 
 void setup() {
-  // put your setup code here, to run once:
-
-  pinMode(CONTROLLINO_D0, OUTPUT);
-  pinMode(CONTROLLINO_D1, OUTPUT);
-  pinMode(CONTROLLINO_D2, OUTPUT);
-  pinMode(CONTROLLINO_D3, OUTPUT);
-
-  // Ethernet initialization
+  // Initialisation de la connexion Ethernet
   Ethernet.begin(mac, ip);
   server.begin();
-  Serial.begin(9600);
-
-  // Ethernet will control the pin 5
-  pinMode(CONTROLLINO_D5, OUTPUT);
-
-  Serial.println("Server started. You can connect at:");
-  Serial.println(Ethernet.localIP());
+  
+  // Initialisation des pins de l'Arduino
+  for (int i = 2; i <= 13; i++) {
+    pinMode(i, OUTPUT);
+    digitalWrite(i, LOW); // Éteindre tous les pins au démarrage
+  }
+  
+  Serial.begin(9600); // Pour le debug
+  inputString.reserve(200); // Alloue de l'espace pour la chaîne
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  digitalWrite(CONTROLLINO_D0, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D0, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D1, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D1, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, LOW);
-  delay(100);
-
-  // Listen resquests
+  // Vérifie si un client est connecté
   EthernetClient client = server.available();
-  
   if (client) {
-    Serial.println("Nouveau client connecté");
-
-    // Wait for the request
-    boolean currentLineIsBlank = true;
-    String httpRequest = "";
-    
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        httpRequest += c;
-
-        // If the line is empty, the HTTP request is complete and can be treated
-        if (c == '\n' && currentLineIsBlank) {
-          
-          if (httpRequest.indexOf("GET /on") != -1) {
-            digitalWrite(CONTROLLINO_D5, HIGH);
-          } 
-          else if (httpRequest.indexOf("GET /off") != -1) {
-            digitalWrite(CONTROLLINO_D5, LOW);
-          }
-
-          // Answer the client
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          client.println("<h1>Arduino Ethernet Control</h1>");
-          client.println("<p>Envoyer GET /on pour allumer ou GET /off pour éteindre.</p>");
-          client.println("</html>");
-          
-          break;
+        if (c == '\n') {
+          stringComplete = true;
+        } else {
+          inputString += c;
         }
 
-        // Gérer les retours chariot
-        if (c == '\n') {
-          currentLineIsBlank = true;
-        } else if (c != '\r') {
-          currentLineIsBlank = false;
+        // Lorsque la commande est complète, traite la chaîne
+        if (stringComplete) {
+          handleCommand(inputString, client);
+          inputString = "";  // Réinitialise la chaîne
+          stringComplete = false;
         }
       }
     }
+    client.stop();  // Ferme la connexion
+  }
+}
 
-    // Fermer la connexion
-    delay(1);
-    client.stop();
-    Serial.println("Client déconnecté");
+void handleCommand(String command, EthernetClient client) {
+  // Sépare la commande et le numéro de pin
+  int spaceIndex = command.indexOf(' ');
+  if (spaceIndex == -1) {
+    client.println("Invalid command");
+    return;
+  }
+
+  String action = command.substring(0, spaceIndex);
+  int pin = command.substring(spaceIndex + 1).toInt();
+
+  if (action == "ON") {
+    digitalWrite(pin, HIGH);  // Allume le pin
+    client.println("Pin " + String(pin) + " is ON");
+  } else if (action == "OFF") {
+    digitalWrite(pin, LOW);   // Éteint le pin
+    client.println("Pin " + String(pin) + " is OFF");
+  } else {
+    client.println("Unknown command");
   }
 }
