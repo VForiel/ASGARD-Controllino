@@ -6,47 +6,30 @@
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
 byte mac[] = {0x50, 0xD7, 0x53, 0x00, 0xEB, 0xA7};    // MAC address (can be found on the Controllino)
-IPAddress ip(192, 168, 1, 177);                       // IP address (arbitrarily choosen)
-EthernetServer server(80);                            // HTTP port
+IPAddress ip(172,16,8,200);                       // IP address (arbitrarily choosen)
+EthernetServer server(23);                            // HTTP port
 
 void setup() {
-  // put your setup code here, to run once:
 
-  pinMode(CONTROLLINO_D0, OUTPUT);
-  pinMode(CONTROLLINO_D1, OUTPUT);
-  pinMode(CONTROLLINO_D2, OUTPUT);
-  pinMode(CONTROLLINO_D3, OUTPUT);
+  for (int i=0; i<5; i++){
+    digitalWrite(CONTROLLINO_D0, HIGH);
+    digitalWrite(CONTROLLINO_R0, HIGH);
+    delay(100);
+    digitalWrite(CONTROLLINO_D0, LOW);
+    digitalWrite(CONTROLLINO_R0, LOW);
+    delay(100);
+  }
 
   // Ethernet initialization
   Ethernet.begin(mac, ip);
   server.begin();
   Serial.begin(9600);
 
-  // Ethernet will control the pin 5
-  pinMode(CONTROLLINO_D5, OUTPUT);
-
   Serial.println("Server started. You can connect at:");
   Serial.println(Ethernet.localIP());
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  digitalWrite(CONTROLLINO_D0, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D0, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D1, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D1, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D2, LOW);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, HIGH);
-  delay(100);
-  digitalWrite(CONTROLLINO_D3, LOW);
-  delay(100);
 
   // Listen resquests
   EthernetClient client = server.available();
@@ -55,50 +38,58 @@ void loop() {
     Serial.println("Nouveau client connecté");
 
     // Wait for the request
-    boolean currentLineIsBlank = true;
-    String httpRequest = "";
+    String request = "";
     
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        httpRequest += c;
+        request += c;
 
         // If the line is empty, the HTTP request is complete and can be treated
-        if (c == '\n' && currentLineIsBlank) {
-          
-          if (httpRequest.indexOf("GET /on") != -1) {
-            digitalWrite(CONTROLLINO_D5, HIGH);
-          } 
-          else if (httpRequest.indexOf("GET /off") != -1) {
-            digitalWrite(CONTROLLINO_D5, LOW);
-          }
-
-          // Answer the client
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");
-          client.println();
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          client.println("<h1>Arduino Ethernet Control</h1>");
-          client.println("<p>Envoyer GET /on pour allumer ou GET /off pour éteindre.</p>");
-          client.println("</html>");
-          
-          break;
-        }
-
-        // Gérer les retours chariot
         if (c == '\n') {
-          currentLineIsBlank = true;
-        } else if (c != '\r') {
-          currentLineIsBlank = false;
+          
+          Serial.println("New Request:");
+          Serial.print(request);
+          
+          if (request[0] == 'o') {
+            int output = get_output(request);
+            digitalWrite(output, HIGH);
+            client.println("o");
+            client.println("Ok");
+          } 
+          else if (request[0] == 'c') {
+            int output = get_output(request);
+            digitalWrite(output, LOW);
+            client.println("c");
+            client.println("Ok");
+          }
+          else if (request[0] == 'q'){
+            client.stop();
+            Serial.println("Client déconnecté");
+          }
+          else {
+            client.println(request);
+            client.println(request[0]);
+            client.println("Err");
+          }
+          request = "";
         }
       }
     }
-
-    // Fermer la connexion
-    delay(1);
-    client.stop();
-    Serial.println("Client déconnecté");
   }
+}
+
+int get_output(String request){
+  int i = 0;
+  String number;
+  while (!isdigit(request[i]) && i < request.length()) {
+      Serial.println("not digit");
+      i++;
+  }
+  while (isdigit(request[i]) && i < request.length()) {
+      Serial.println("digit");
+      number += request[i];
+      i++;
+  }
+  return number.toInt();
 }
