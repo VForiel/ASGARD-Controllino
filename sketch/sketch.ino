@@ -6,12 +6,12 @@
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
 byte mac[] = {0x50, 0xD7, 0x53, 0x00, 0xEB, 0xA7};    // MAC address (can be found on the Controllino)
-IPAddress ip(172,16,8,200);                       // IP address (arbitrarily choosen)
+IPAddress ip(172,16,8,200);                           // IP address (arbitrarily choosen)
 EthernetServer server(23);                            // HTTP port
 
 void setup() {
 
-  for (int i=0; i<5; i++){
+  for (int i=0; i<3; i++){
     digitalWrite(CONTROLLINO_D0, HIGH);
     digitalWrite(CONTROLLINO_R0, HIGH);
     delay(100);
@@ -51,25 +51,41 @@ void loop() {
           Serial.println("New Request:");
           Serial.print(request);
           
-          if (request[0] == 'o') {
-            int output = get_output(request);
-            digitalWrite(output, HIGH);
-            client.println("o");
-            client.println("Ok");
-          } 
-          else if (request[0] == 'c') {
-            int output = get_output(request);
-            digitalWrite(output, LOW);
-            client.println("c");
-            client.println("Ok");
-          }
-          else if (request[0] == 'q'){
+          // Parse the request ------------------------------------------------
+
+          char c = request[0];
+
+          // Command is open|close|get
+          if (c == 'o' || c == 'c' || c == 'g') {
+            int pin = get_pin(request);
+
+            if (pin != 0) {
+              if (c == 'o') {
+                if (is_pwm(pin)){
+                  analogWrite(pin, int(255*9/12));
+                } else {
+                  digitalWrite(pin, HIGH);
+                }
+                client.println("Ok");
+              } else if (c == 'c') {
+                digitalWrite(pin, LOW);
+                client.println("Ok");
+              } else if (c == 'g') {
+                if (is_pwm(pin)){
+                  client.println(min(1,pulseIn(pin, HIGH)));
+                } else {
+                  client.println(String(digitalRead(pin)));
+                }
+              }
+            } else {
+              client.println("Err");
+            }
+
+          } else if (c == 'q'){
             client.stop();
             Serial.println("Client déconnecté");
-          }
-          else {
-            client.println(request);
-            client.println(request[0]);
+
+          } else {
             client.println("Err");
           }
           request = "";
@@ -79,17 +95,27 @@ void loop() {
   }
 }
 
-int get_output(String request){
+int get_pin(String request){
   int i = 0;
-  String number;
+  String pin;
   while (!isdigit(request[i]) && i < request.length()) {
-      Serial.println("not digit");
       i++;
   }
-  while (isdigit(request[i]) && i < request.length()) {
-      Serial.println("digit");
-      number += request[i];
-      i++;
+  if (isdigit(request[i])) {
+    while (isdigit(request[i]) && i < request.length()) {
+        pin += request[i];
+        i++;
+    }
+    return pin.toInt();
+  } else {
+    return 0;
   }
-  return number.toInt();
+}
+
+bool is_pwm(int pin){
+  if (pin >= 2 && pin <= 10){
+    return true;
+  } else {
+    return false;
+  }
 }

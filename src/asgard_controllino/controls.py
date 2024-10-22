@@ -28,13 +28,28 @@ CONNEXIONS = {
     "R0": 22,
 }
 
+def get_devices():
+    return list(CONNEXIONS.keys())
+
 class Controllino():
     def __init__(self, ip, port=23):
         self.ip = ip
         self.port = port
 
     def turn_on(self, key):
-        return requests.get("o" + str(CONNEXIONS[key]))
+        if key in CONNEXIONS:
+            return requests.get("o" + str(CONNEXIONS[key]))
+        else:
+            raise ValueError(f"Unkown device '{key}'")
     
     def turn_off(self, key):
-        return requests.get("off/" + str(CONNEXIONS[key]))
+        if key in CONNEXIONS:
+            return requests.get("c" + str(CONNEXIONS[key]))
+        else:
+            raise ValueError(f"Unknown device '{key}'")
+        
+    def get_status(self, key):
+        if key in CONNEXIONS:
+            return requests.get("g" + str(CONNEXIONS[key]))
+        else:
+            raise ValueError(f"Unknown device '{key}'")

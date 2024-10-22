@@ -42,7 +42,18 @@ port = 23 # Port you defined in the sketch
 controllino = asgard.Controllino(ip, port)
 ```
 
-### `Turn on/off`
+### Turn on/off
+
+Control the power supply of the different components of the ASGARD platform.
+
+```{admonition} Linked devices
+:class: warning
+Some devices cannot be powered at the same time. Make sure to turn off a device before turning on another one. Linked devices are:
+- 8893-K-M, 1+ and 8893-K-M, 1-
+- 8893-K-M, 2+ and 8893-K-M, 2-
+- 8893-K-M, 3+ and 8893-K-M, 3-
+- 8893-K-M, 4+ and 8893-K-M, 4-
+```
 
 ```{function} .turn_on(device)
 
@@ -72,4 +83,22 @@ Turn off a device.
 
 ```python
 controllino.turn_off('DM1')
+```
+
+### Get status
+
+```{function} is_powered(device)
+
+Get the status of a device.
+
+:Parameters:
+    **device** `str`: Device to get the status of.
+
+:Return:
+    `bool`: True if the device is on, False otherwise.
+```
+
+```python
+powered = controllino.get_status('DM3')
+print(powered) # True or False
 ```
