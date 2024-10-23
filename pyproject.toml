@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+            "setuptools>=61.0"
+        ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ASGARD_Controllino"
+version = "0.0.2"
+authors = [
+  { name="Vincent Foriel", email="vince.lrf@gmail.com" },
+]
+dependencies = []
+description = "One library to rule all the ASGARD devices."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/VForiel/ASGARD-Controllino"
+"Documentation" = "https://asgard-controllino.readthedocs.io"
+"Bug Tracker" = "https://github.com/VForiel/ASGARD-Controllino/issues"

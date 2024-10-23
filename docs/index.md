@@ -11,7 +11,12 @@ This python library allows you to control the power supply of the different comp
 
     👉 [sketch.ino](https://github.com/VForiel/ASGARD-Controllino/blob/Test-dynamic-pin/sketch/sketch.ino)
 
-    Then upload the sketch to the controllino. The sketch might require the "Controllino" library the you can find on the Arduino IDE.
+    Then upload the sketch to the controllino.
+
+    ```{admonition} Sketch dependencies
+    :class: important
+    The sketch require the `Controllino.h` and `Adafruit_MCP4728.h` libraries. You can easily find on the Arduino IDE.
+    ```
 
 2. **Connect your computer to the same local network as the controllino**
 

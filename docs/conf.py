@@ -9,7 +9,6 @@
 project = 'ASGARD Controllino'
 copyright = '2024, Vincent Foriel'
 author = 'Vincent Foriel'
-release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

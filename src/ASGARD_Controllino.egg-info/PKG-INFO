@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: ASGARD_Controllino
+Version: 0.0.1
+Summary: One library to rule all ASGARD devices
+Author-email: Vincent Foriel <vince.lrf@gmail.com>
+Project-URL: Homepage, https://github.com/VForiel/ASGARD-Controllino
+Project-URL: Documentation, https://asgard-controllino.readthedocs.io
+Project-URL: Bug Tracker, https://github.com/VForiel/ASGARD-Controllino/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+
+# ASGARD-Controllino
