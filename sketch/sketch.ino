@@ -83,8 +83,6 @@ void loop() {
 
           } else if (c == 'q'){
             client.stop();
-            Serial.println("Client diconnected");
-
           } else {
             client.println("Err");
           }
@@ -92,6 +90,7 @@ void loop() {
         }
       }
     }
+    Serial.println("Client diconnected");
   }
 }
 

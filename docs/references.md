@@ -6,6 +6,9 @@
 
 Returns a list of all devices connected to the Asgard Controllino.
 
+Available devices:
+`MFF101/M 1-4`, `8893-K-M 1+`, `8893-K-M 1-`, `8893-K-M 2+`, `8893-K-M 2-`, `8893-K-M 3+`, `8893-K-M 3-`, `8893-K-M 4+`, `8893-K-M 4-`, `LS16P`, `DM1`, `DM2`, `DM3`, `DM4`, `XMC (BMX)`, `XMC (BMY)`, `XMC (BFO,SDL)`, `USB hubs both`, `MFF signal 1`, `MFF signal 2`, `MFF signal 3`, `MFF signal 4`
+
 :Return:
     `list[string]`: List of devices.
 ```
@@ -14,7 +17,7 @@ Returns a list of all devices connected to the Asgard Controllino.
 import asgard_controllino as asgard
 
 devices = asgard.get_devices()
-print(devices) # ['DM1', 'DM2', 'DM3', 'DM4', '8893-K-M, 1+', '8893-K-M, 1-', ...]
+print(devices) # ['MFF101/M 1-4', '8893-K-M 1+', '8893-K-M 1-', ...]
 ```
 
 ---
