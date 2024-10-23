@@ -142,6 +142,6 @@ Set the value of the Piezo DAC.
 
 :Example:
     ```python
-    controllino.set_piezo_dac(0.5)
+    controllino.set_piezo_dac(0.5) # VB output of MCP4728 chipset should be 2.44V
     ```
 :::
