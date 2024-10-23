@@ -62,7 +62,7 @@ By default, each command open and close a connexion to the Controllino. This fun
     ```
 :::
 
-### Device control
+### Device power control
 
 Control the power supply of the different components of the ASGARD platform.
 
@@ -109,7 +109,7 @@ Turn off a device.
     ```
 :::
 
-### Device status
+### Device power status
 
 :::{function} .get_status(device)
 
