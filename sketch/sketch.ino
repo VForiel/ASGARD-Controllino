@@ -62,7 +62,7 @@ void loop() {
             if (pin != 0) {
               if (c == 'o') {
                 if (is_pwm(pin)){
-                  analogWrite(pin, int(255*9/12));
+                  analogWrite(pin, int(255*9/24));
                 } else {
                   digitalWrite(pin, HIGH);
                 }

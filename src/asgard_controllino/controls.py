@@ -36,23 +36,6 @@ class Controllino():
         self._maintain_connection = False
         self.client = None
 
-    def _clear_buffer(self):
-
-        # Set very very short timeout to avoid waiting for new data
-        self.client.settimeout(1e-20)
-        try:
-            while True:
-                data = self.client.recv(1024)
-                if not data:
-                    break
-        except BlockingIOError:
-            pass  # Nothing to read, normal
-        except TimeoutError:
-            pass # No answer, normal too
-
-        # Reset timeout
-        self.client.settimeout(10)
-
     def _ensure_device(self, key):
         if key not in CONNEXIONS:
             raise ValueError(f"Unkown device '{key}'")
@@ -78,61 +61,52 @@ class Controllino():
             self.disconnect()
         self._maintain_connection = value
 
-    def turn_on(self, key):
+    def _clear_buffer(self):
+        # Set very very short timeout to avoid waiting for new data
+        self.client.settimeout(1e-20)
+        try:
+            while True:
+                data = self.client.recv(1024)
+                if not data:
+                    break
+        except BlockingIOError:
+            pass  # Nothing to read, normal
+        except TimeoutError:
+            pass # No answer, normal too
 
+        # Reset timeout
+        self.client.settimeout(10)
+
+    def send_command(self, command):
         if self.client is None:
             self.connect()
 
         self._clear_buffer()
-        self._ensure_device(key)
 
+        self.client.sendall(bytes(command + "\n", "utf-8"))
+        r = self.client.recv(1024).decode().replace("\n", "").replace("\r", "")
+
+        if not self.maintain_connection:
+            self.disconnect()
+
+        return r
+
+    def turn_on(self, key):
+        self._ensure_device(key)
+        
         # Manage linked devices
         if key.startswith('8893-K-M '):
             if key.endswith('+') and self.get_status(k2 := key[:-1] + '-'):
                 raise IOError(f"Can't turn on '{key}' while '{k2}' is on")
             if key.endswith('-') and self.get_status(k2 := key[:-1] + '+'):
                 raise IOError(f"Can't turn on '{key}' while '{k2}' is on")
-            
-        if self.client is None:
-            self.connect()
 
-        # Send turn on command
-        self.client.sendall(bytes("o" + str(CONNEXIONS[key]) + "\n", "utf-8"))
-        r = self.client.recv(1024).decode().replace("\n", "").replace("\r", "")
-
-        if not self.maintain_connection:
-            self.disconnect()
-
-        return r
+        return self.send_command("o" + str(CONNEXIONS[key]))
     
     def turn_off(self, key):
-
-        if self.client is None:
-            self.connect()
-
-        self._clear_buffer()
         self._ensure_device(key)
-        
-        self.client.sendall(bytes("c" + str(CONNEXIONS[key]) + "\n", "utf-8"))
-        r = self.client.recv(1024).decode().replace("\n", "").replace("\r", "")
-
-        if not self.maintain_connection:
-            self.disconnect()
-        
-        return r
+        return self.send_command("c" + str(CONNEXIONS[key]))
         
     def get_status(self, key):
-        
-        if self.client is None:
-            self.connect()
-            
-        self._clear_buffer()
         self._ensure_device(key)
-
-        self.client.sendall(bytes("g" + str(CONNEXIONS[key]) + "\n", "utf-8"))
-        r = self.client.recv(1024).decode().replace("\n", "").replace("\r", "")
-    
-        if not self.maintain_connection:
-            self.disconnect()
-        
-        return bool(int(r))
+        return bool(int(self.send_command("g" + str(CONNEXIONS[key]))))

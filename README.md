@@ -1,10 +1,8 @@
 <div align=center>
 
+<img src="https://raw.githubusercontent.com/VForiel/ASGARD-Controllino/refs/heads/main/docs/_static/logo.png"  width="150px">
+
 # ASGARD Controllino
-
-
-<img src="./docs/_static/logo.png"  width="100px">
-
 
 One library to rule all the ASGARD devices.
 
