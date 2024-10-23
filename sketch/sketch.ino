@@ -35,7 +35,7 @@ void loop() {
   EthernetClient client = server.available();
   
   if (client) {
-    Serial.println("Nouveau client connecté");
+    Serial.println("Client connected");
 
     // Wait for the request
     String request = "";
@@ -83,7 +83,7 @@ void loop() {
 
           } else if (c == 'q'){
             client.stop();
-            Serial.println("Client déconnecté");
+            Serial.println("Client diconnected");
 
           } else {
             client.println("Err");

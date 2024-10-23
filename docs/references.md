@@ -87,7 +87,7 @@ controllino.turn_off('DM1')
 
 ### Get status
 
-```{function} is_powered(device)
+```{function} get_status(device)
 
 Get the status of a device.
 
