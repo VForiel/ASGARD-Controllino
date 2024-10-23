@@ -127,3 +127,21 @@ Get the status of a device.
     print(powered) # True or False
     ```
 :::
+
+### Piezo DAC
+
+:::{function} .set_piezo_dac(value)
+
+Set the value of the Piezo DAC.
+
+:Parameter:
+    **value** `float`: Value to set the Piezo DAC to. Must be between 0 (-> 0V) and 1 (-> 4.88V).
+
+:Return:
+    `bool`: True if successful, False otherwise.
+
+:Example:
+    ```python
+    controllino.set_piezo_dac(0.5)
+    ```
+:::

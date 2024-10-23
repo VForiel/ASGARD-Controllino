@@ -89,11 +89,11 @@ class Controllino():
         if not self.maintain_connection:
             self.disconnect()
 
-        return r
+        return bool(int(r))
 
     def turn_on(self, key):
         self._ensure_device(key)
-        
+
         # Manage linked devices
         if key.startswith('8893-K-M '):
             if key.endswith('+') and self.get_status(k2 := key[:-1] + '-'):
@@ -109,4 +109,8 @@ class Controllino():
         
     def get_status(self, key):
         self._ensure_device(key)
-        return bool(int(self.send_command("g" + str(CONNEXIONS[key]))))
+        return self.send_command("g" + str(CONNEXIONS[key]))
+    
+    def set_piezo_dac(self, value):
+        value = int(value*4095)
+        return self.send_command(f"a{value}")
