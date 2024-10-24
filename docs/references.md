@@ -66,6 +66,10 @@ By default, each command open and close a connexion to the Controllino. This fun
 
 Control the power supply of the different components of the ASGARD platform.
 
+::::{function} .turn_on(device)
+
+Turn on a device.
+
 :::{admonition} Linked devices
 :class: warning
 Some devices cannot be powered at the same time. Make sure to turn off a device before turning on another one. Linked devices are:
@@ -73,11 +77,9 @@ Some devices cannot be powered at the same time. Make sure to turn off a device 
 - 8893-K-M, 2+ and 8893-K-M, 2-
 - 8893-K-M, 3+ and 8893-K-M, 3-
 - 8893-K-M, 4+ and 8893-K-M, 4-
+
+Also, as these devices are using PWM, turning them on can take few seconds due to the necessity to check the power status first (see [Device power status](#device-power-status)).
 :::
-
-:::{function} .turn_on(device)
-
-Turn on a device.
 
 :Parameter:
     **device** `str`: Device to turn on.
@@ -89,7 +91,7 @@ Turn on a device.
     ```python
     controllino.turn_on('DM3')
     ```
-:::
+::::
 
 
 
@@ -111,9 +113,14 @@ Turn off a device.
 
 ### Device power status
 
-:::{function} .get_status(device)
+::::{function} .get_status(device)
 
 Get the status of a device.
+
+:::{admonition} Delay for devices using PWM
+:class: note
+Getting the status of devices that use PWM can take few seconds.
+:::
 
 :Parameter:
     **device** `str`: Device to get the status of.
@@ -126,7 +133,7 @@ Get the status of a device.
     powered = controllino.get_status('DM3')
     print(powered) # True or False
     ```
-:::
+::::
 
 ### Piezo DAC
 
