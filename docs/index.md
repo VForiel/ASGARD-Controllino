@@ -20,7 +20,7 @@ This python library allows you to control the power supply of the different comp
 
 2. **Connect your computer to the same local network as the controllino**
 
-3. **Install the python library** (soon)
+3. **Install the python library**
 
     ```bash
     pip install asgard-controllino
