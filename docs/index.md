@@ -29,10 +29,10 @@ This python library allows you to control the power supply of the different comp
 # 🚀 Quickstart
 
 ```python
-from asgard_controllino import Controllino
+import asgard_controllino import asgard
 
 ip = '172.16.8.200' # IP address you defined in the sketch
-controllino = Controllino(ip) 
+controllino = asgard.Controllino(ip) 
 controllino.turn_on('DM3')
 controllino.turn_off('DM1')
 ```
