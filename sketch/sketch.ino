@@ -63,24 +63,6 @@ void setup() {
   Serial.begin(9600);
   Ethernet.begin(mac, ip);
 
-  // join I2C bus (address optional for master)
-  // !!! Where do we set the speed??
-  // Wire.begin(); 
-
-  // Try to initialize! 
-  //if (!mcp.begin()) {
-   // Serial.println("Failed to find MCP4728 chip"); 
-   // while (1) {
-   //   delay(10); 
-   // }
-  //}
-
-  // Start with all piezo voltages at 0 - A through D is 0 through 3.
-  //mcp.setChannelValue(MCP4728_CHANNEL_A, 0);
-  //mcp.setChannelValue(MCP4728_CHANNEL_B, 0);
- // mcp.setChannelValue(MCP4728_CHANNEL_C, 0);
-//  mcp.setChannelValue(MCP4728_CHANNEL_D, 0);
-
   // Start with all servos zeroed.
   for (int i=0; i<MAX_SERVOS;i++){
       pi_params[i].k_prop = 0;
@@ -106,135 +88,130 @@ void setup() {
 }
 
 void loop() {
-
+  char c = ' ';
   // Listen resquests
   EthernetClient client = server.available();
   
   if (client) {
-    Serial.println("Client connected");
-
     // Wait for the request
     String request = "";
     
-    // Here is the infinite loop. First, we listen for commands, then we read the thermistors and 
-    // set the fan speed.
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        request += c;
-
-        // If the line is empty, the HTTP request is complete and can be treated
-        if (c == '\n') {
-          
-          Serial.println("New Request:");
-          Serial.print(request);
-          
-          // Parse the request ------------------------------------------------
-
-          char c = request[0];
-
-          // Command is open|close|get|analog
-          if (c == 'o' || c == 'c' || c == 'g' || c == 'a' || c=='m' || c=='p') {
-            next_str_ix = 1;
-            int pin = get_value(request);
-
-            if (pin != -1) {
-              if (c == 'o') {
-                digitalWrite(pin, HIGH);
-                client.println("1");
-              } else if (c == 'm'){
-                // SAFETY: Limit this explicitly
-                int value = get_value(request);
-                if (value >= 0){
-                  Serial.println(String(value)); // Bugshooting
-                  if (pin >= MIN_9V_PIN && pin <= MAX_9V_PIN)
-                    if (value > int(255*9/24)) value = int(255*9/24);
-                  analogWrite(pin, value);
-                  client.println("1");
-              }
-                else client.println("0");
-              } else if (c == 'c') {
-                digitalWrite(pin, LOW);
-                client.println("1");
-              } else if (c == 'g') {
-                client.println(String(digitalRead(pin)));
-              } else if (c == 'i') {
-                client.println(String(analogRead(pin)));
-              } else if (c == 'a') {
-                int value = get_value(request);
-                Serial.println(String(value)); // Bugshooting
-                /// Sanity check this.
-                if (value < 0 || value > 4096) {
-                  client.println("0");
-                } else {
-                  if (!mcp_init){
-                    if (!mcp.begin()){
-                        client.println("0");
-                    } else mcp_init=true;
-                  }
-                  if (mcp_init)
-                  { 
-                    if (mcp.setChannelValue(pin, value)){
-                      client.println("1");
-                    } else {
-                      mcp_init=false;
-                      client.println("0");
-                    }
-                  }
-                }
-              } else if (c == 'p') {
-                //p[index] [mPIN] [iPIN] [setpoint] [k_prop] [k_int] [m_min]
-                pi_params[pin].m_pin = get_value(request);
-                pi_params[pin].i_pin = get_value(request);
-                pi_params[pin].setpoint = get_value(request);
-                pi_params[pin].k_prop = get_value(request);
-                pi_params[pin].k_int = get_value(request);
-                pi_params[pin].m_min = get_value(request);
-                // Sanity check and disable if a problem.
-                if (pi_params[pin].m_pin < 0 || pi_params[pin].i_pin < 0 || pi_params[pin].setpoint < 0) pi_params[pin].k_prop=0;
-                // Reset the integral if the integral term is reset.
-                if (pi_params[pin].k_int == 0) pi_params[pin].integral=0;
-                // Reset the time of last iteration (important if this is the first activation)
-                pi_params[pin].last_msec = millis();
-              }
-            } else {
-              client.println("0");
-            }
-          } else if (c == 'q'){
-            client.stop();
-          } else {
-            client.println("0");
-          }
-          request = "";
-        }
-      } else {
-        // Now lest run a servo loop!
-        if (pi_params[s_ix].k_prop != 0){
-          // Read the analog input and find the error.
-          int error = analogRead(pi_params[s_ix].i_pin) - pi_params[s_ix].setpoint;
-          
-          // Compute the integral of the error. The integral has to be bounded.
-          unsigned long now = millis();
-          int dt = now - pi_params[s_ix].last_msec;
-          pi_params[s_ix].last_msec = now;
-          pi_params[s_ix].integral += dt * error;
-          if (pi_params[s_ix].integral > MAX_INTEGRAL) pi_params[s_ix].integral = MAX_INTEGRAL;
-          if (pi_params[s_ix].integral < -MAX_INTEGRAL) pi_params[s_ix].integral = -MAX_INTEGRAL;
-
-          // Do the PI servo math
-          int output = (pi_params[s_ix].m_min + 256)/2 + 
-            pi_params[s_ix].k_prop * error / 32 + 
-            pi_params[s_ix].k_int * pi_params[s_ix].integral/65536;
-          
-          // Make sure that we are within range for the putout, and write it.
-          if (output < pi_params[s_ix].m_min) output = pi_params[s_ix].m_min;
-          if (output > 255) output = 255;
-          analogWrite(pi_params[s_ix].m_pin, output);
-        }
-        s_ix++; // move on to the next servo when we get the next chance. 
-      }
+    // Read the input string up until a newline character. Remaining characters will be left
+    // in the buffer.
+    while (client.available() && c != '\n') {
+      c = client.read();
+      request += c;
     }
-    Serial.println("Client diconnected");
+    // Check we have a validly terminated message.
+    if (c != '\n') {
+      Serial.println("Erroneous Request (no newline):");
+      Serial.println(request);
+      return failure(client);
+    }
+    Serial.println("New Request:");
+    Serial.print(request);
+
+    // Parse the request ------------------------------------------------
+
+    char c = request[0];
+    // First, deal with any single character requests.
+    if (c=='q'){
+      client.stop();
+      return;
+    } 
+    // Get the "pin" value (the first integer)
+    next_str_ix = 1;
+    int pin = get_value(request);
+    if (pin == -1){
+      Serial.println("Invalid integer pin number.");
+      return;
+    }
+    // Now the commands which use 1 or more arguments
+    if (c == 'o') {
+      digitalWrite(pin, HIGH);
+      return success(client);
+    } else if (c == 'm'){
+      // SAFETY: Limit this explicitly
+      int value = get_value(request);
+      if (value >= 0){
+        Serial.println(String(value)); // Bugshooting
+        if (pin >= MIN_9V_PIN && pin <= MAX_9V_PIN)
+          if (value > int(255*9/24)) value = int(255*9/24);
+        analogWrite(pin, value);
+        return success(client);
+      }
+      else failure(client);
+    } else if (c == 'c') {
+      digitalWrite(pin, LOW);
+      return success(client);
+    } else if (c == 'g') {
+      client.println(String(digitalRead(pin)));
+    } else if (c == 'i') {
+      client.println(String(analogRead(pin)));
+    } else if (c == 'a') {
+      // Analog ouput through the DAC.
+      int value = get_value(request);
+      Serial.println(String(value)); // Bugshooting
+      /// Sanity check the output value.
+      if (value < 0 || value > 4095) 
+        return failure(client);
+      // If we aren't initialised, initialise!
+      if (!mcp_init){
+        if (!mcp.begin()){
+          return failure(client);
+        } else mcp_init=true;
+      }
+      // Set the ADC value, catching an error if it occurs.
+      if (mcp.setChannelValue(pin, value)){
+        return success(client);
+      } else {
+        mcp_init=false;
+        return failure(client);
+      }
+    } else if (c == 'p') {
+      //p[index] [mPIN] [iPIN] [setpoint] [k_prop] [k_int] [m_min]
+      pi_params[pin].m_pin = get_value(request);
+      pi_params[pin].i_pin = get_value(request);
+      pi_params[pin].setpoint = get_value(request);
+      pi_params[pin].k_prop = get_value(request);
+      pi_params[pin].k_int = get_value(request);
+      pi_params[pin].m_min = get_value(request);
+      // Sanity check and disable if a problem.
+      if (pi_params[pin].m_pin < 0 || pi_params[pin].i_pin < 0 || pi_params[pin].setpoint < 0) pi_params[pin].k_prop=0;
+      // Reset the integral if the integral term is reset.
+      if (pi_params[pin].k_int == 0) pi_params[pin].integral=0;
+      // Reset the time of last iteration (important if this is the first activation)
+      pi_params[pin].last_msec = millis();
+    } else {
+      Serial.println("Invalid command character.");
+      return failure(client);
+    }
+  }
+  else {
+    // Now lest run a servo loop!
+    if (pi_params[s_ix].k_prop != 0){
+      // Read the analog input and find the error.
+      int error = analogRead(pi_params[s_ix].i_pin) - pi_params[s_ix].setpoint;
+      
+      // Compute the integral of the error. The integral has to be bounded.
+      unsigned long now = millis();
+      int dt = now - pi_params[s_ix].last_msec;
+      pi_params[s_ix].last_msec = now;
+      pi_params[s_ix].integral += dt * error;
+      if (pi_params[s_ix].integral > MAX_INTEGRAL) pi_params[s_ix].integral = MAX_INTEGRAL;
+      if (pi_params[s_ix].integral < -MAX_INTEGRAL) pi_params[s_ix].integral = -MAX_INTEGRAL;
+
+      // Do the PI servo math
+      int output = (pi_params[s_ix].m_min + 256)/2 + 
+        pi_params[s_ix].k_prop * error / 32 + 
+        pi_params[s_ix].k_int * pi_params[s_ix].integral/65536;
+      
+      // Make sure that we are within range for the putout, and write it.
+      if (output < pi_params[s_ix].m_min) output = pi_params[s_ix].m_min;
+      if (output > 255) output = 255;
+      analogWrite(pi_params[s_ix].m_pin, output);
+    }
+    s_ix++; // move on to the next servo when we get the next chance. 
   }
 }
 
@@ -254,18 +231,20 @@ int get_value(String request){
 
     // Initial command - check that the pin number isn't silly.
     // We can do more sophisticated checking later!
-    //if (next_str_ix == 1){
-      // Check that the pin number is in range
-   //   if (value >= 0 && value <= 80){
-    //      return value;
-    //    }
-    //  } else return value;
-    
+    if (next_str_ix == 1 && value > 80) value=-1;
+   
     //Increment the place of the next number.
     next_str_ix += i;
     return value;
-    //return -1; // Invalid value
   } else {
     return -1; // No value
   }
+}
+
+// Failure and success as functions so behaviour is easy to read and easily changed.
+void failure(EthernetClient client){
+  client.println("0");
+}
+void success(EthernetClient client){
+  client.println("1");
 }

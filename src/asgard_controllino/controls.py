@@ -23,16 +23,16 @@ CONNEXIONS = {
     'Thermal' : 77,
     'LS16P (LFO)' : 78,
     'Piezo/Laser' : 80,
-    'BLF 1' : 22,
-    'BLF 2' : 23,
-    'BLF 3' : 24,
-    'BLF 4' : 25,
+    'BLF1' : 22,
+    'BLF2' : 23,
+    'BLF3' : 24,
+    'BLF4' : 25,
     'Red L' : 30,
-    'Green L' : 31 #,
-#    'Lower Thermistor' : 
-#    'Upper Thermistor' :
-#    'Bench Thermistor' :
-#    'Floor Thermistor' :
+    'Green L' : 31,
+    'Lower T' : 54,
+    'Upper T' : 55,
+    'Bench T' : 56,
+    'Floor T' : 57
 }
 
 # List of devices
@@ -44,7 +44,7 @@ class Controllino():
         self.ip = ip
         self.port = port
 
-        self._maintain_connection = False
+        self._maintain_connection = True #Set to false if this doesn't work.
         self.client = None
 
     # Ensure the device is known
@@ -93,7 +93,7 @@ class Controllino():
         self.client.settimeout(10)
 
     # Send a command to the device
-    def send_command(self, command:str) -> bool:
+    def send_command_anyreply(self, command:str) -> str:
         # If the connection is not maintained, we need to connect before sending the command
         if self.client is None:
             self.connect()
@@ -111,18 +111,14 @@ class Controllino():
             self.disconnect()
 
         return bool(int(r)) # Convert the answer to a boolean
+    
+    #Send a command, expecting a boolean reply
+    def send_command(self, command:str) -> bool:
+        return bool(int(self.send_command_anyreply(command)))
 
     # Command to turn on a device
     def turn_on(self, key:str) -> bool:
         self._ensure_device(key)
-
-        # Manage linked devices to avoid conflicts
-        if key.startswith('Flip'):
-            if key.endswith('+') and self.get_status(k2 := key[:-1] + '-'):
-                raise IOError(f"Can't turn on '{key}' while '{k2}' is on")
-            if key.endswith('-') and self.get_status(k2 := key[:-1] + '+'):
-                raise IOError(f"Can't turn on '{key}' while '{k2}' is on")
-
         return self.send_command("o" + str(CONNEXIONS[key]))
     
     # Command to turn off a device
@@ -139,9 +135,19 @@ class Controllino():
     def modulate(self, key:str, value:int) -> bool:
         self._ensure_device(key)
         if value < 0 or value > 255:
-        	raise ValueError ("The value must be between 0 and 255")
+            raise ValueError ("The value must be between 0 and 255")
         return self.send_command("m" + str(CONNEXIONS[key]) + f" {value}")
     
+    # Command to ask for an analog input.
+    def analog_input(self, key:str) -> int:
+        self._ensure_device(key)
+        return_str = self.send_command("i" + str(CONNEXIONS[key]))
+        try:
+            return_int = int(return_str)
+            assert 0<=return_int<1024
+            return return_int
+        except:
+            raise ValueError("Returned value was not an integer between 0 and 1023")
     
     # Command to set the piezo DAC value
     def set_piezo_dac(self, channel:int, value:int) -> bool:
