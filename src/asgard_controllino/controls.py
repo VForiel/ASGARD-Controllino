@@ -2,28 +2,37 @@ import socket
 
 # List of devices and the associated arduino pin
 CONNEXIONS = {
-    'MFF101/M 1-4' : 2,
-    '8893-K-M 1+' : 3,
-    '8893-K-M 1-' : 4,
-    '8893-K-M 2+' : 5,
-    '8893-K-M 2-' : 6,
-    '8893-K-M 3+' : 7,
-    '8893-K-M 3-' : 8,
-    '8893-K-M 4+' : 9,
-    '8893-K-M 4-' : 10,
-    'LS16P' : 22,
+    'Flip1+' : 3,
+    'Flip2+' : 4,
+    'Flip3+' : 5,
+    'Flip4+' : 6,
+    'Flip1-' : 7,
+    'Flip2-' : 8,
+    'Flip3-' : 9,
+    'Flip4-' : 10,
+    'Lower Fan' : 11,
+    'Upper Fan' : 12,
     'DM1' : 42,
     'DM2' : 43,
     'DM3' : 44,
     'DM4' : 45,
-    'XMC (BMX)' : 46,
-    'XMC (BMY)' : 47,
-    'XMC (BFO,SDL)' : 48,
-    'USB hubs both' : 49,
-    'MFF signal 1' : 77,
-    'MFF signal 2' : 78,
-    'MFF signal 3' : 79,
-    'MFF signal 4' : 80,
+    'X-MCC (BMX,BMY)' : 46,
+    'X-MCC (BFO,SDL,BDS)' : 47,
+    'MFF101 (BLF)': 48,
+    'USB hubs' : 49,
+    'Thermal' : 77,
+    'LS16P (LFO)' : 78,
+    'Piezo/Laser' : 80,
+    'BLF 1' : 22,
+    'BLF 2' : 23,
+    'BLF 3' : 24,
+    'BLF 4' : 25,
+    'Red L' : 30,
+    'Green L' : 31 #,
+#    'Lower Thermistor' : 
+#    'Upper Thermistor' :
+#    'Bench Thermistor' :
+#    'Floor Thermistor' :
 }
 
 # List of devices
@@ -108,7 +117,7 @@ class Controllino():
         self._ensure_device(key)
 
         # Manage linked devices to avoid conflicts
-        if key.startswith('8893-K-M '):
+        if key.startswith('Flip'):
             if key.endswith('+') and self.get_status(k2 := key[:-1] + '-'):
                 raise IOError(f"Can't turn on '{key}' while '{k2}' is on")
             if key.endswith('-') and self.get_status(k2 := key[:-1] + '+'):
@@ -125,10 +134,20 @@ class Controllino():
     def get_status(self, key:str) -> bool:
         self._ensure_device(key)
         return self.send_command("g" + str(CONNEXIONS[key]))
+
+    # Command to get the power status of a device
+    def modulate(self, key:str, value:int) -> bool:
+        self._ensure_device(key)
+        if value < 0 or value > 255:
+        	raise ValueError ("The value must be between 0 and 255")
+        return self.send_command("m" + str(CONNEXIONS[key]) + f" {value}")
+    
     
     # Command to set the piezo DAC value
-    def set_piezo_dac(self, value:float) -> bool:
-        if value < 0 or value > 1:
-            raise ValueError("The value must be between 0 and 1")
-        value = int(value*4095) # Convert the value to the 12 bits DAC range
-        return self.send_command(f"a{value}")
+    def set_piezo_dac(self, channel:int, value:int) -> bool:
+        if channel < 0 or channel > 4095:
+            raise ValueError("The chanel must be between 0 and 4095")
+        if value < 0 or value > 4095:
+            raise ValueError("The value must be between 0 and 4095")
+        value = int(value) # Convert the value to the 12 bits DAC range
+        return self.send_command(f"a{channel} {value}")

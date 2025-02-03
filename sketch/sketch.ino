@@ -56,29 +56,30 @@ struct PIParams {
 
 struct PIParams pi_params[MAX_SERVOS];
 int s_ix=0; // Servo index
+bool mcp_init=false; //Is the MCP initialised? This can be checked on start-up.
 
 void setup() {
   // Ethernet initialization
-  Ethernet.begin(mac, ip);
   Serial.begin(9600);
+  Ethernet.begin(mac, ip);
 
   // join I2C bus (address optional for master)
   // !!! Where do we set the speed??
   // Wire.begin(); 
 
   // Try to initialize! 
-  if (!mcp.begin()) {
-    Serial.println("Failed to find MCP4728 chip"); 
-    while (1) {
-      delay(10); 
-    }
-  }
+  //if (!mcp.begin()) {
+   // Serial.println("Failed to find MCP4728 chip"); 
+   // while (1) {
+   //   delay(10); 
+   // }
+  //}
 
   // Start with all piezo voltages at 0 - A through D is 0 through 3.
-  mcp.setChannelValue(MCP4728_CHANNEL_A, 0);
-  mcp.setChannelValue(MCP4728_CHANNEL_B, 0);
-  mcp.setChannelValue(MCP4728_CHANNEL_C, 0);
-  mcp.setChannelValue(MCP4728_CHANNEL_D, 0);
+  //mcp.setChannelValue(MCP4728_CHANNEL_A, 0);
+  //mcp.setChannelValue(MCP4728_CHANNEL_B, 0);
+ // mcp.setChannelValue(MCP4728_CHANNEL_C, 0);
+//  mcp.setChannelValue(MCP4728_CHANNEL_D, 0);
 
   // Start with all servos zeroed.
   for (int i=0; i<MAX_SERVOS;i++){
@@ -133,7 +134,7 @@ void loop() {
           char c = request[0];
 
           // Command is open|close|get|analog
-          if (c == 'o' || c == 'c' || c == 'g' || c == 'a') {
+          if (c == 'o' || c == 'c' || c == 'g' || c == 'a' || c=='m' || c=='p') {
             next_str_ix = 1;
             int pin = get_value(request);
 
@@ -141,13 +142,17 @@ void loop() {
               if (c == 'o') {
                 digitalWrite(pin, HIGH);
                 client.println("1");
-              } else if (c=='m'){
+              } else if (c == 'm'){
                 // SAFETY: Limit this explicitly
                 int value = get_value(request);
-                if (pin >= MIN_9V_PIN && pin <= MAX_9V_PIN)
-                  if (value > int(255*9/24)) value = int(255*9/24);
-                analogWrite(pin, value);
-                client.println("1");
+                if (value >= 0){
+                  Serial.println(String(value)); // Bugshooting
+                  if (pin >= MIN_9V_PIN && pin <= MAX_9V_PIN)
+                    if (value > int(255*9/24)) value = int(255*9/24);
+                  analogWrite(pin, value);
+                  client.println("1");
+              }
+                else client.println("0");
               } else if (c == 'c') {
                 digitalWrite(pin, LOW);
                 client.println("1");
@@ -157,12 +162,25 @@ void loop() {
                 client.println(String(analogRead(pin)));
               } else if (c == 'a') {
                 int value = get_value(request);
+                Serial.println(String(value)); // Bugshooting
                 /// Sanity check this.
                 if (value < 0 || value > 4096) {
                   client.println("0");
                 } else {
-                  mcp.setChannelValue(pin, value);
-                  client.println("1");
+                  if (!mcp_init){
+                    if (!mcp.begin()){
+                        client.println("0");
+                    } else mcp_init=true;
+                  }
+                  if (mcp_init)
+                  { 
+                    if (mcp.setChannelValue(pin, value)){
+                      client.println("1");
+                    } else {
+                      mcp_init=false;
+                      client.println("0");
+                    }
+                  }
                 }
               } else if (c == 'p') {
                 //p[index] [mPIN] [iPIN] [setpoint] [k_prop] [k_int] [m_min]
@@ -236,17 +254,17 @@ int get_value(String request){
 
     // Initial command - check that the pin number isn't silly.
     // We can do more sophisticated checking later!
-    if (next_str_ix == 1){
+    //if (next_str_ix == 1){
       // Check that the pin number is in range
-      if (value >= 0 && value <= 80){
-          return value;
-        }
-      } else return value;
+   //   if (value >= 0 && value <= 80){
+    //      return value;
+    //    }
+    //  } else return value;
     
     //Increment the place of the next number.
-    next_str_ix += 1 + i;
-
-    return -1; // Invalid value
+    next_str_ix += i;
+    return value;
+    //return -1; // Invalid value
   } else {
     return -1; // No value
   }
